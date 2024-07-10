@@ -1,6 +1,11 @@
 #include "cpu.hh"
 #include <cstdint>
 
+Cpu::Cpu():
+    X(0)
+ {}
+Cpu::~Cpu() {}
+
 uint8_t Cpu::read(uint16_t addr) {
     return (addr <= 0xffff) ? m_ram[addr] : 0x0000;
 }
@@ -10,11 +15,24 @@ void Cpu::write(uint16_t addr, uint8_t byte) {
 }
 
 void Cpu::fetch_op(uint8_t opcode) {
-    // uhm uh
+}
+
+void Cpu::tick() {
+    for (int j = 0; j < 16; ++j) {
+    for (int i = 0; i < 16; ++i) {
+        printf("%d ", m_lookup[i + j*16].cycles);
+    }
+    std::cout<<std::endl;
+    }
+    (this->*m_lookup[0xE8].op)();
+    (this->*m_lookup[0xE8].op)();
+    (this->*m_lookup[0xE8].op)();
+    (this->*m_lookup[0xE8].op)();
+    printf("%d\n", X);
 }
 
 // ---------------------------
-/* CPU Instructions
+// CPU Instructions
 void Cpu::LDA(){
 
 };
@@ -132,7 +150,7 @@ void Cpu::INC(){
 
 void Cpu::INX(){
     X++;
-    if(X==0) flags[status::Zero] = 1;
+    flags[status::Zero] = (X==0);
 };
 
 void Cpu::INY(){
@@ -258,4 +276,3 @@ void Cpu::NOP(){
 void Cpu::RTI(){
 
 };
-*/
