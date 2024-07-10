@@ -7,5 +7,5 @@ and all of the compounded experience this will be a bit easier.
 At the moment this uses a very simple CMake file.
 ```bash
 cmake -B build -S src
-cmake --build build && ./build/nescc
+cmake --build build && ./build/nes_emu
 ```

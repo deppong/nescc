@@ -70,11 +70,13 @@ public:
 
     uint8_t m_ram[4096];
 
+    uint8_t ROM[0xFFFF];
+
     uint8_t read(uint16_t);
     void write(uint16_t, uint8_t);
 
     void fetch_op(uint8_t opcode);
-    void set_addr_mode();
+    void set_addr_mode(opcode o);
 
 public:
     // get  ready for all these opcodes :!

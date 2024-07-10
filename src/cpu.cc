@@ -1,6 +1,8 @@
 #include "cpu.hh"
 #include <cstdint>
 
+// https://www.masswerk.at/6502/6502_instruction_set.html
+
 Cpu::Cpu():
     X(0)
  {}
@@ -12,6 +14,43 @@ uint8_t Cpu::read(uint16_t addr) {
 
 void Cpu::write(uint16_t addr, uint8_t byte) {
     m_ram[addr] = (addr <= 0xffff) ? byte : m_ram[addr];
+}
+
+void Cpu::set_addr_mode(opcode o) {
+    // even though we could use function pointers, and even though
+    // this doesn't really need to be super performant, I feel
+    // like we can just use a switch statement here as it saves 
+    // on space, memory, and cpu cycles...
+
+    // just a little macro to grab the next two bytes and put them
+    // in little endian OPCODE LL HH -> 
+    #define LLHH(x) x | x<<8
+    switch(o.mode) {
+        case acc: m_addr = A; break;
+        case imp: m_addr = 0; break;
+        case imm: m_addr = ROM[++PC]; break;
+        case zpg: m_addr = read(ROM[++PC]); break;
+        case zpx: m_addr = read(X + ROM[++PC]);break;
+        case zpy: m_addr = read(Y + ROM[++PC]);break;
+        case rel: m_addr = read(ROM[++PC] + PC+1);break;
+        case abs: m_addr = read(LLHH(ROM[++PC])); break;
+        case abx: m_addr = read((LLHH(ROM[++PC])) + X); break;
+        case aby: m_addr = read((LLHH(ROM[++PC])) + Y); break;
+        case ind: 
+            {uint16_t a = LLHH(ROM[++PC]);
+            m_addr = read(a)|read(a+1)<<8;}
+            break;
+        case inx: 
+            {uint16_t a = ROM[++PC] + X;
+            m_addr = read(read(a)|read(a+1)<<8);}
+            break;
+        case iny:
+            {uint16_t a = ROM[++PC] + Y;
+            m_addr = read(read(a)|read(a+1)<<8);}
+            break;
+        case ill: m_addr = 0;break;
+        default: m_addr = 0; break;
+    }
 }
 
 void Cpu::fetch_op(uint8_t opcode) {
@@ -28,6 +67,7 @@ void Cpu::tick() {
     (this->*m_lookup[0xE8].op)();
     (this->*m_lookup[0xE8].op)();
     (this->*m_lookup[0xE8].op)();
+    printf("sizeof mode: %d\n", m_lookup[0xE8].mode);
     printf("%d\n", X);
 }
 
