@@ -70,16 +70,21 @@ public:
     uint16_t m_addr=0;
     uint8_t m_data=0;
     uint8_t current_op=0;
+    uint32_t cycles;
 
-    uint8_t m_ram[0xFFFF];
 
-    uint8_t ROM[0xFFFF];
+    // external to the CPU 
+    uint8_t m_ram[0xFFFF] = {0};
+
+    uint8_t ROM[0xFFFF] = {0};
 
     uint8_t read(uint16_t);
     void write(uint16_t, uint8_t);
 
     void fetch_op(uint8_t opcode);
     void set_addr_mode(opcode o);
+
+    void reset();
 
 public:
     // get  ready for all these opcodes :!

@@ -3,10 +3,20 @@
 
 // https://www.masswerk.at/6502/6502_instruction_set.html
 
-Cpu::Cpu():
-    X(0)
- {}
+Cpu::Cpu(){}
 Cpu::~Cpu() {}
+
+void Cpu::reset() {
+    A = 0;
+    X = 0;
+    Y = 0;
+    PC = read(0xFFFC) | read(0xFFFC + 1) << 8;
+    SP = 0xFD;
+    flags.reset();
+    m_addr = 0;
+    m_data = 0;
+    cycles = 0;
+}
 
 uint8_t Cpu::read(uint16_t addr) {
     return (addr <= 0xffff) ? m_ram[addr] : 0x0000;
@@ -52,12 +62,18 @@ void Cpu::set_addr_mode(opcode o) {
             m_data = read(m_addr);
             break;
         case abx:
-            m_addr = (LLHH(ROM[PC++])) + X;
-            m_data = read(m_addr);
+            m_addr = (LLHH(ROM[PC++]));
+            {uint16_t hi = m_addr & 0xFF00;
+            m_addr += X;
+            if ((m_addr & 0xFF00) != hi) cycles++;
+            m_data = read(m_addr);}
             break;
         case aby:
             m_addr = (LLHH(ROM[PC++])) + Y;
-            m_data = read(m_addr);
+            {uint16_t hi = m_addr & 0xFF00;
+            m_addr += Y;
+            if ((m_addr & 0xFF00) != hi) cycles++;
+            m_data = read(m_addr);}
             break;
         case ind: 
             {uint16_t a = LLHH(ROM[PC++]);
@@ -70,7 +86,10 @@ void Cpu::set_addr_mode(opcode o) {
             break;
         case iny:
             {uint16_t a = ROM[PC++];
-            m_addr = (read(a)|read(a+1)<<8) + Y;
+            m_addr = (read(a)|read(a+1)<<8);
+            uint16_t hi = m_addr & 0xFF00;
+            m_addr += Y;
+            if ((m_addr & 0xFF00) != hi) cycles++;
             m_data = read(m_addr); }
             break;
         case ill: m_addr = 0;break;
@@ -82,15 +101,10 @@ void Cpu::fetch_op(uint8_t opcode) {
 }
 
 void Cpu::tick() {
-    for (int j = 0; j < 16; ++j) {
-    for (int i = 0; i < 16; ++i) {
-        printf("%x %d ", i+j*16, m_lookup[i + j*16].cycles);
-    }
-    std::cout<<std::endl;
-    }
-    (this->*m_lookup[0xE8].op)();
-    printf("sizeof mode: %d\n", m_lookup[0xE8].mode);
-    printf("%d\n", X);
+    current_op = ROM[PC++];
+    cycles += m_lookup[current_op].cycles;
+    set_addr_mode(m_lookup[current_op]);
+    (this->*m_lookup[current_op].op)();
 }
 
 // ---------------------------
@@ -325,7 +339,6 @@ void Cpu::ROR(){
         write(m_addr, m_data);
     else 
         A = m_data;
-
 };
 
 void Cpu::JMP(){
@@ -350,50 +363,74 @@ void Cpu::RTS(){
 
 void Cpu::BCC(){
     if (!flags[Carry]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
 void Cpu::BCS(){
     if (flags[Carry]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
 void Cpu::BEQ(){
     if (flags[Zero]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 
 };
 
 void Cpu::BMI(){
     if (flags[Negative]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
 void Cpu::BNE(){
     if (!flags[Zero]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
 void Cpu::BPL(){
     if (flags[Zero]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
 void Cpu::BVC(){
     if (!flags[Overflow]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
 void Cpu::BVS(){
     if (flags[Overflow]) {
+        uint16_t hi = PC & 0xFF00;
         PC = m_data;
+        if ((PC & 0xFF00) != hi) cycles++;
+        cycles++;
     }
 };
 
