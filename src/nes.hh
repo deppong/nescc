@@ -23,7 +23,7 @@ public:
     };
     const void update() {
         cpu.tick();
-        printf("X:%d Y:%d A:%d \nSP:%#X PC:%#X CYCLES: %d\n", cpu.X, cpu.Y, cpu.A, cpu.SP, cpu.PC, cpu.cycles);
+        printf("X:%d Y:%d A:%d \nSP:%#X PC:%#X CYCLES: %d\n status: %s\n", cpu.X, cpu.Y, cpu.A, cpu.SP, cpu.PC, cpu.cycles, cpu.flags.to_string().c_str());
     };
 
 private:
