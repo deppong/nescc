@@ -35,7 +35,8 @@ public:
         Carry     = (1<<0),
         Zero      = (1<<1),
         Interrupt = (1<<2),
-        // 3 and 4 unused!
+        // Decimal mode unused, not available on the Ricoh 2A03
+        Break     = (1<<4),
         Decimal   = (1<<5),
         Overflow  = (1<<6),
         Negative  = (1<<7)
@@ -67,6 +68,8 @@ public:
     uint16_t PC;
     uint8_t X, Y, SP, A;
     uint16_t m_addr;
+    uint8_t m_data;
+    uint8_t current_op;
 
     uint8_t m_ram[4096];
 
