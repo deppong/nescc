@@ -32,14 +32,14 @@ public:
     std::bitset<8> flags;
 
     enum status{
-        Carry     = (1<<0),
-        Zero      = (1<<1),
-        Interrupt = (1<<2),
-        // Decimal mode unused, not available on the Ricoh 2A03
-        Break     = (1<<4),
-        Decimal   = (1<<5),
-        Overflow  = (1<<6),
-        Negative  = (1<<7)
+        Carry     = 0,
+        Zero      = 1,
+        Interrupt = 2,
+        Decimal   = 3,
+        Break     = 4,
+        // unused
+        Overflow  = 6,
+        Negative  = 7
     };
 
     // Dear god... This is a massive initializer list of our lookup table
@@ -65,13 +65,13 @@ public:
         {&Cpu::BEQ, 2, rel},{&Cpu::SBC, 5, iny},{&Cpu::NOP, 0, ill},{&Cpu::NOP, 0, ill},{&Cpu::NOP, 0, ill},{&Cpu::SBC, 4, zpx},{&Cpu::INC, 6, zpx},{&Cpu::NOP, 0, ill},{&Cpu::SED, 2, imp},{&Cpu::SBC, 4, aby},{&Cpu::NOP, 0, ill},{&Cpu::NOP, 0, ill},{&Cpu::NOP, 0, ill},{&Cpu::SBC, 4, abx},{&Cpu::INC, 7, abx},{&Cpu::NOP, 0, ill}
     };
 
-    uint16_t PC;
-    uint8_t X, Y, SP, A;
-    uint16_t m_addr;
-    uint8_t m_data;
-    uint8_t current_op;
+    uint16_t PC = 0;
+    uint8_t X=0, Y=0, SP=0, A=0;
+    uint16_t m_addr=0;
+    uint8_t m_data=0;
+    uint8_t current_op=0;
 
-    uint8_t m_ram[4096];
+    uint8_t m_ram[0xFFFF];
 
     uint8_t ROM[0xFFFF];
 

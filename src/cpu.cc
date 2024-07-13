@@ -89,9 +89,6 @@ void Cpu::tick() {
     std::cout<<std::endl;
     }
     (this->*m_lookup[0xE8].op)();
-    (this->*m_lookup[0xE8].op)();
-    (this->*m_lookup[0xE8].op)();
-    (this->*m_lookup[0xE8].op)();
     printf("sizeof mode: %d\n", m_lookup[0xE8].mode);
     printf("%d\n", X);
 }
@@ -170,23 +167,22 @@ void Cpu::TXS(){
 };
 
 void Cpu::PHA(){
-    write(0x0100 + SP++, A);
+    write(0x0100 + SP--, A);
 };
 
 void Cpu::PHP(){
-    write(0x0100 + SP++, flags.to_ulong());
+    write(0x0100 + SP--, flags.to_ulong());
 };
 
 void Cpu::PLA(){
-    A = read(0x0100 + SP--);
+    A = read(0x0100 + SP++);
     flags.set(Zero,A == 0);
     flags.set(Negative,A & 0x80);
 };
 
 void Cpu::PLP(){
-    flags = read(0x0100 + SP--);
+    flags = read(0x0100 + SP++);
 };
-
 
 void Cpu::AND(){
     A &= m_data;
@@ -197,28 +193,27 @@ void Cpu::AND(){
 void Cpu::EOR(){
     A ^= m_data;
     flags.set(Zero,A == 0);
-    flags.set(Negative,A & 0x80);
+    flags.set(Negative, A & 0x80);
 };
 
 void Cpu::ORA(){
     A |= m_data;
-    flags.set(Zero,A == 0);
-    flags.set(Negative,A & 0x80);
+    flags.set(Zero,(A == 0));
+    flags.set(Negative, (A & 0x80 )> 1);
 };
 
 void Cpu::BIT(){
-    flags[Zero] = m_addr & A;
-    flags[Overflow] = (m_addr | Overflow);
-    flags[Negative] = (m_addr | Negative);
+    flags[Zero] = m_data & A;
+    flags[Overflow] = (m_data | Overflow);
+    flags[Negative] = (m_data | Negative);
 };
-
 
 // The NES Ricoh 2A03 Lacks decimal mode, so we ignore it. 
 // https://stackoverflow.com/questions/29193303/6502-emulation-proper-way-to-implement-adc-and-sbc
 void Cpu::ADC(){
-    unsigned const sum = A + m_addr + flags[Carry];
+    unsigned const sum = A + m_data + flags[Carry];
     flags.set(Carry, sum>0xFF);
-    flags[Overflow] = ~(A ^ m_addr) & (A ^ sum) & 0x80;
+    flags[Overflow] = ~(A ^ m_data) & (A ^ sum) & 0x80;
     A = sum;
     if (A == 0) flags.set(Zero);
     if (A & 0b10000000) flags.set(Negative);
@@ -226,25 +221,25 @@ void Cpu::ADC(){
 
 // 2's complement makes this implementation simple
 void Cpu::SBC(){
-    m_addr = ~m_addr;
+    m_data = ~m_data;
     Cpu::ADC();
 };
 
 void Cpu::CMP(){
-    flags.set(Carry, A>=m_addr);
-    flags.set(Zero, A=m_addr);
+    flags.set(Carry, A>=m_data);
+    flags.set(Zero, A==m_data);
     flags.set(Negative, A & 0x80);
 };
 
 void Cpu::CPX(){
-    flags.set(Carry, X>=m_addr);
-    flags.set(Zero, X=m_addr);
+    flags.set(Carry, X>=m_data);
+    flags.set(Zero, X==m_data);
     flags.set(Negative, X & 0x80);
 };
 
 void Cpu::CPY(){
-    flags.set(Carry, Y>=m_addr);
-    flags.set(Zero, Y=m_addr);
+    flags.set(Carry, Y>=m_data);
+    flags.set(Zero, Y==m_data);
     flags.set(Negative, Y & 0x80);
 };
 
@@ -286,110 +281,174 @@ void Cpu::DEY(){
     flags.set(Negative, Y & 0x80);
 };
 
-
 void Cpu::ASL(){
-    flags.set(Carry, m_data & 0b10000000);
+    flags.set(Carry, m_data & 0x80);
     m_data <<= 1;
-    if (A == 0) flags |= Zero;
-    if (A & Negative) flags|= Negative;
+    flags.set(Zero,A==0);
+    flags.set(Negative, m_data & 0x80);
+    if (m_lookup[current_op].mode != acc || m_lookup[current_op].mode != imp) 
+        write(m_addr, m_data);
+    else 
+        A = m_data;
 };
 
 void Cpu::LSR(){
-    m_addr >>= 1;
+    flags.set(Carry, m_data & 0x00);
+    m_data >>= 1;
+    flags.set(Zero,A==0);
+    flags.set(Negative, m_data & 0x80);
+    if (m_lookup[current_op].mode != acc || m_lookup[current_op].mode != imp) 
+        write(m_addr, m_data);
+    else 
+        A = m_data;
 };
 
 void Cpu::ROL(){
-
+    flags.set(Carry, m_data & 0x80);
+    m_data <<= 1;
+    m_data |= flags[Carry];
+    flags.set(Zero,A==0);
+    flags.set(Negative, m_data & 0x80);
+    if (m_lookup[current_op].mode != acc || m_lookup[current_op].mode != imp) 
+        write(m_addr, m_data);
+    else 
+        A = m_data;
 };
 
 void Cpu::ROR(){
+    flags.set(Carry, m_data & 1);
+    m_data >>= 1;
+    m_data |= flags[Carry]<<7;
+    flags.set(Zero,A==0);
+    flags.set(Negative, m_data & 0x80);
+    if (m_lookup[current_op].mode != acc || m_lookup[current_op].mode != imp) 
+        write(m_addr, m_data);
+    else 
+        A = m_data;
 
 };
 
-
 void Cpu::JMP(){
-    PC = m_addr;
+    PC = m_data;
 };
 
 void Cpu::JSR(){
-
+    PC--;
+    write(0x0100 + SP, (PC >> 8) & 0x00FF);
+    SP--;
+    write(0x0100 + SP, PC & 0x00FF);
+    SP--;
 };
 
 void Cpu::RTS(){
-
+    SP++;
+    PC = read(0x0100 + SP);
+    SP++;
+    PC |= read(0x0100 + SP) >> 8;
+    PC++;
 };
 
-
 void Cpu::BCC(){
-
+    if (!flags[Carry]) {
+        PC = m_data;
+    }
 };
 
 void Cpu::BCS(){
-
+    if (flags[Carry]) {
+        PC = m_data;
+    }
 };
 
 void Cpu::BEQ(){
+    if (flags[Zero]) {
+        PC = m_data;
+    }
 
 };
 
 void Cpu::BMI(){
-
+    if (flags[Negative]) {
+        PC = m_data;
+    }
 };
 
 void Cpu::BNE(){
-
+    if (!flags[Zero]) {
+        PC = m_data;
+    }
 };
 
 void Cpu::BPL(){
-
+    if (flags[Zero]) {
+        PC = m_data;
+    }
 };
 
 void Cpu::BVC(){
-
+    if (!flags[Overflow]) {
+        PC = m_data;
+    }
 };
 
 void Cpu::BVS(){
-
+    if (flags[Overflow]) {
+        PC = m_data;
+    }
 };
 
-
 void Cpu::CLC(){
-
+    flags.reset(Carry);
 };
 
 void Cpu::CLD(){
-
+    //Unused for Ricoh 2A03
 };
 
 void Cpu::CLI(){
-
+    flags.reset(Interrupt);
 };
 
 void Cpu::CLV(){
-
+    flags.reset(Overflow);
 };
 
 void Cpu::SEC(){
-
+    flags.set(Carry);
 };
 
 void Cpu::SED(){
-
+    flags.set(Decimal);
 };
 
 void Cpu::SEI(){
-
+    flags.set(Interrupt);
 };
 
-
 void Cpu::BRK(){
+    PC++;
+    write(0x0100 + SP, (PC >> 8) & 0x00FF);
+    SP--;
+    write(0x0100 + SP, PC & 0x00FF);
+    SP--;
 
+    flags.set(Break);
+    write(0x0100 + SP, flags.to_ulong());
+    SP--;
+    flags.set(Break, 0);
+    PC = read(0xFFFE) | read(0xFFFF) << 8;
 };
 
 void Cpu::NOP(){
-
+    // lol
 };
 
 void Cpu::RTI(){
+    SP++;
+    flags = read(0x0100 + SP);
 
+    SP++;
+    PC = read(0x0100 + SP);
+    SP++;
+    PC |= read(0x0100 + SP) << 8;
 };

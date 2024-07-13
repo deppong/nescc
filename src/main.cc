@@ -1,8 +1,10 @@
-#include "cpu.hh"
+#include "nes.hh"
 
-int main(void) {
-    auto cpu = Cpu();
+int main(int argc, char** argv) {
+    // stupid?
+    Nes nes = Nes();
+    // nes.load_from_file(argv[1]);
 
-    cpu.tick();
+    nes.update();
     return 0;
 }
